@@ -1,26 +1,24 @@
 package main
 
 import (
-
+	"flag"
+	"goSocket/server/utils"
 	"net"
-	"./utils"
-//	"strconv"
-	"strconv"
 )
 
-
 func main() {
-	startServer("./conf/config.yaml")
+	p := flag.String("p", "9000", "listen socket port")
+	//c := flag.Bool("w", true, "c  chang")
+	t := flag.Int("t", 3, "timeout --second")
+
+	flag.Parse()
+	startServer(*p, *t)
 }
 
+func startServer(port string, timeout int) {
+	//	setup a socket and listen the port
 
-func startServer(configpath string){
-//	setup a socket and listen the port
-	configmap := utils.GetYamlConfig(configpath)
-	host := utils.GetElement("host", configmap)
-	timeinterval,err := strconv.Atoi(utils.GetElement("beatinginterval", configmap))
-	utils.CheckError(err)
-	netListen, err := net.Listen("tcp", host)
+	netListen, err := net.Listen("tcp", "0.0.0.0:"+port)
 	utils.CheckError(err)
 	defer netListen.Close()
 	utils.Log("Waiting for clients")
@@ -32,9 +30,8 @@ func startServer(configpath string){
 		}
 
 		utils.Log(conn.RemoteAddr().String(), " tcp connect success")
-		go handleConnection(conn, timeinterval)
+		go handleConnection(conn, timeout)
 	}
-
 
 	// you can run this part of code in Window System
 
@@ -54,9 +51,8 @@ func startServer(configpath string){
 	//}
 }
 
-
 //handle the connection
-func handleConnection(conn net.Conn, timeout int ) {
+func handleConnection(conn net.Conn, timeout int) {
 
 	tmpBuffer := make([]byte, 0)
 
@@ -70,20 +66,14 @@ func handleConnection(conn net.Conn, timeout int ) {
 		}
 
 		tmpBuffer = utils.Depack(append(tmpBuffer, buffer[:n]...))
-		utils.Log( "receive data string:", string(tmpBuffer))
-		utils.TaskDeliver(tmpBuffer,conn)
+		utils.Log("receive data string:", string(tmpBuffer))
+		utils.TaskDeliver(tmpBuffer, conn)
 		//start heartbeating
-		go utils.HeartBeating(conn,messnager,timeout)
+		go utils.HeartBeating(conn, messnager, timeout)
 		//check if get message from client
-		go utils.GravelChannel(tmpBuffer,messnager)
+		go utils.GravelChannel(tmpBuffer, messnager)
 
 	}
 	defer conn.Close()
 
-
-
 }
-
-
-
-
